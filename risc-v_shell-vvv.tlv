@@ -43,7 +43,9 @@
    $reset = *reset;
 
    /* PC */
-   $next_pc[31:0] = $reset == 1 ? 32'b0 : $pc[31:0] + 32'd4;
+   $next_pc[31:0] = $reset == 1 ? 32'b0 :
+                    $is_b_instr == 1 ? $br_tgt_pc[31:0] :
+                    $pc[31:0] + 32'd4;
    $pc[31:0] = >>1$next_pc[31:0];
    
    /* IMEM */
@@ -54,11 +56,12 @@
    $is_s_instr = $instr[6:2] ==? 5'b0100x;
    $is_j_instr = $instr[6:2] ==  5'b11011;
    $is_r_instr = $instr[6:2] ==  5'b01100 ||
-                  $instr[6:2] == 5'b01011 ||
-                  $instr[6:2] == 5'b10100;
+                 $instr[6:2] ==  5'b01011 ||
+                 $instr[6:2] ==  5'b01110 ||
+                 $instr[6:2] ==  5'b10100;
    $is_i_instr = $instr[6:2] ==? 5'b0000x ||
-                  $instr[6:2] == 5'b001x0 ||
-                  $instr[6:2] == 5'b11001;
+                 $instr[6:2] ==  5'b001x0 ||
+                 $instr[6:2] ==  5'b11001;
    $is_b_instr = $instr[6:2] ==? 5'b11000;
 
    /* INSTR. EXTRACTION */
@@ -95,10 +98,20 @@
 
    /* ALU */
    $result[31:0] =
-      $is_addi ? $src1_value + $imm :
-      $is_add ? $src1_value + $src2_value :
-                 32'b0;
-
+      $is_addi ? $src1_value[31:0] + $imm[31:0] :
+      $is_add ? $src1_value[31:0] + $src2_value[31:0] :
+         32'b0;
+                 
+   /* Branching */
+   $taken_br =
+      $is_beq  ? $src1_value[31:0] == $src2_value[31:0] : 
+      $is_bne  ? $src1_value[31:0] != $src2_value[31:0] : 
+      $is_blt  ? ($src1_value[31:0] < $src2_value[31:0]) ^ ($src1_value[31] != $src2_value[31]) : 
+      $is_bge  ? ($src1_value[31:0] >= $src2_value[31:0]) ^ ($src1_value[31] != $src2_value[31]) : 
+      $is_bltu ? $src1_value[31:0] < $src2_value[31:0] : 
+      $is_bgeu ? $src1_value[31:0] >= $src2_value[31:0] : 
+         32'b0;
+   $br_tgt_pc[31:0] = $pc[31:0] + $imm[31:0];
    
    `BOGUS_USE($is_beq $is_bne $is_blt $is_bge $is_bltu $is_bgeu $is_addi $is_add);
    `BOGUS_USE($rd $rd_valid $rs1 $rs1_valid $rs2 $rs2_valid $imm_valid $funct3 $funct3_valid) 
@@ -107,7 +120,7 @@
    *passed = 1'b0;
    *failed = *cyc_cnt > M4_MAX_CYC;
    
-   m4+rf(32, 32, $reset, $rd_valid, $rd[4:0], $result[31:0], $rs1_en, $rs1[4:0], $src1_value, $rs2_en, $rs2[4:0], $src2_value)
+   m4+rf(32, 32, $reset, $rd_valid, $rd[4:0], $result[31:0], $rs1_valid, $rs1[4:0], $src1_value, $rs2_valid, $rs2[4:0], $src2_value)
    //m4+dmem(32, 32, $reset, $addr[4:0], $wr_en, $wr_data[31:0], $rd_en, $rd_data)
    m4+cpu_viz()
 \SV
