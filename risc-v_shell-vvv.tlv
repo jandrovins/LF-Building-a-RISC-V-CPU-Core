@@ -76,7 +76,7 @@
    
    
    /* FIELD VALIDATION BITS */
-   $rd_valid = $is_r_instr || $is_i_instr || $is_u_instr || $is_j_instr;
+   $rd_valid = ($is_r_instr || $is_i_instr || $is_u_instr || $is_j_instr) && ($rd[4:0] != 5'b0);
    $funct3_valid = $is_r_instr || $is_i_instr || $is_s_instr || $is_b_instr;
    $rs1_valid = $is_r_instr || $is_i_instr || $is_s_instr || $is_b_instr;
    $rs2_valid = $is_r_instr || $is_s_instr || $is_b_instr;
